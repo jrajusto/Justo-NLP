@@ -64,8 +64,9 @@ def printQuery():
     continueButton = Button(outputQueryFrame,text="Continue",command=translateQuery,padx=10)
     continueButton.grid(row=0,column=1)
 
-def printAnswer():
-    outputAnswer = Label()
+def printAnswer(answer):
+    outputAnswer = Label(outputAnswerFrame,text=answer)
+    outputAnswer.pack()
 
     
 
@@ -117,7 +118,7 @@ def translateQuery():
     global sqlQuery
     global headingList
     global graphBool
-    sqlQuery,headingList,graphBool = translate.convertToSql(query)
+    sqlQuery,headingList,graphBool,optimalBool = translate.convertToSql(query)
     myCursor.execute(sqlQuery)
     output = myCursor.fetchall()
     createTable(output)
@@ -132,6 +133,8 @@ def translateQuery():
             axis[headingNo].plot(df['Date_n_Time'],df[heading])
             axis[headingNo].set_title(heading)
             headingNo = headingNo + 1
+    if optimalBool:
+        print('optimal')
 
         #axis[headingNo].set_title("Combined graph")
         #for heading in headingList:
@@ -197,8 +200,9 @@ speakButton.grid(row=1,column=1)
 outputQueryFrame = LabelFrame(mainWindow,padx=5,pady=5,text='You entered the query')
 outputQueryFrame.pack(anchor=W)
 
-outputAnswer = LabelFrame(mainWindow,padx=5,pady=5,text='Answer')
-outputAnswer.pack(anchor=W)
+#Output answer frame
+outputAnswerFrame = LabelFrame(mainWindow,padx=5,pady=5,text='Answer')
+outputAnswerFrame.pack(anchor=W)
 
 #Output data frame
 outputDataFrame = LabelFrame(mainWindow,text = 'Output Data')

@@ -83,9 +83,24 @@ def convertToSql(query):
     print("Good synonyms")
     print(goodSynonyms)
 
+    synonyms = wn.synsets('greater')
+    greaterSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+    print("Greater synonyms")
+    print(greaterSynonyms)
+
+    synonyms = wn.synsets('below')
+    belowSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+    print("Below synonyms")
+    print(belowSynonyms)
+
+    synonyms = wn.synsets('equal')
+    equalSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+    print("Below synonyms")
+    print(equalSynonyms)
 
 
-    
+
+    #cutoff the end of the phrase with plant name
     for word in test1Words:
         tempTest1Words.append(word)
         if word in plantList:
@@ -108,6 +123,7 @@ def convertToSql(query):
     print("Current Date")
     print(p.getDate())
 
+    optimalBool = False
 
     #finding action
     if(len(test1Words) > 0):
@@ -130,6 +146,7 @@ def convertToSql(query):
                                 month = currentMonth
                                 
                             finalString = "SELECT * FROM " + sensorNode + " WHERE Date_n_Time > " + currentYear + "-" + currentMonth + "-1 00:00:00" + " AND Date_n_Time < " + currentYear + "-" + currentMonth + "-" + monthToDayMax[month] + " 11:59:59"
+                            optimalBool = True
 
         else:
         
@@ -153,11 +170,11 @@ def convertToSql(query):
                 print(wordList)
 
                 if wordList[0] in parameterList:
-                    if wordList[1] == operationList[0]:
+                    if wordList[1] == operationList[0] or wordList[1] in greaterSynonyms:
                         conditionString.append(wordList[0]+' > ' + str(w2n.word_to_num(wordList[2])))
-                    elif wordList[1] == operationList[1]:
+                    elif wordList[1] == operationList[1] or wordList[1] in belowSynonyms:
                         conditionString.append(wordList[0]+' < ' + str(w2n.word_to_num(wordList[2])))
-                    elif wordList[1] == operationList[2]:
+                    elif wordList[1] == operationList[2] or wordList[1] in equalSynonyms:
                         conditionString.append(wordList[0]+' = ' + str(w2n.word_to_num(wordList[2])))
                     else:
                         conditionString.append(wordList[0]+' = ' + str(w2n.word_to_num(wordList[1])))
@@ -280,4 +297,4 @@ def convertToSql(query):
     print(finalString)
 
     #returns the final translated string, and the headings of the parameters
-    return finalString, entries,graphBool
+    return finalString, entries,graphBool,optimalBool
