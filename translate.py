@@ -7,10 +7,27 @@ from itertools import chain
 
 
 
+class Plant:
+    def __init__(self,name,hum,temp,soil,air,lux):
+        self.name = name
+        self.humidity = hum
+        self.temperature = temp
+        self.soilMoisture = soil
+        self.airQuality = air
+        self.lightIntensity = lux
+
+    def setOptimal(self,name,hum,temp,soil,air,lux):
+        self.name = name
+        self.humidity = hum
+        self.temperature = temp
+        self.soilMoisture = soil
+        self.airQuality = air
+        self.lightIntensity = lux
 
 
 
-def convertToSql(query):
+
+def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
 
     #initial entries list
     entries = ['ID','Date_n_Time']
@@ -65,6 +82,8 @@ def convertToSql(query):
 
     tempTest1Words = []
     finalString = None
+
+    plantName = None
 
     synonyms = wn.synsets('graph')
     graphSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
@@ -129,6 +148,7 @@ def convertToSql(query):
     if(len(test1Words) > 0):
 
         if((test1Words[0] not in showSynonyms) and (test1Words[0] not in graphSynonyms)):
+            
             for word in test1Words:
                 if word in plantList:
                     plant = word
@@ -138,21 +158,71 @@ def convertToSql(query):
                     sensorNode = plantDict[plant]
                     adjectiveWordList = adjectiveWordList[0]
 
-                    if adjectiveWordList[0] in adjectiveList:
-                        if 'month' in tokens:
-                            if 'last' in tokens:
-                                month = str(int(currentMonth)-1)
-                            else:
-                                month = currentMonth
-                                
-                            finalString = "SELECT * FROM " + sensorNode + " WHERE Date_n_Time > " + currentYear + "-" + currentMonth + "-1 00:00:00" + " AND Date_n_Time < " + currentYear + "-" + currentMonth + "-" + monthToDayMax[month] + " 11:59:59"
-                            optimalBool = True
+                    if plant == optimalPlant1.name:
+                       optimalPlant = optimalPlant1
+                       sqlQuery="SELECT * FROM sensor_node_1_tb "
+                    elif plant == optimalPlant2.name:
+                        optimalPlant = optimalPlant2
+                        sqlQuery="SELECT * FROM sensor_node_2_tb "
+                    elif plant == optimalPlant3.name:
+                        optimalPlant = optimalPlant3
+                        sqlQuery="SELECT * FROM sensor_node_3_tb "
+                    elif plant == optimalPlant4.name:
+                        optimalPlant = optimalPlant4
+                        sqlQuery="SELECT * FROM sensor_node_4_tb "
+
+            whereOnce = False
+            andDelay = 0
+            specificBool = False
+
+            #add conditions of optimal plant
+            for word in test1Words:
+                if word in parameterList:
+                    specificBool = True
+                    if whereOnce == False:
+                        sqlQuery = sqlQuery + "WHERE"
+                        whereOnce = True
+
+                    if andDelay == 0:
+                        andDelay = 1
+                    
+                    if andDelay == 1:
+                        andDelay = sqlQuery + " AND"
+                    
+                    if word == "temperature":
+                        sqlQuery = sqlQuery + " Temperature < " + optimalPlant.temperature 
+
+                    elif word == "humidity":
+                        sqlQuery = sqlQuery + " Humidity < " + optimalPlant.humidity 
+
+                    elif word == "air":
+                        sqlQuery = sqlQuery + " AirQuality < " + optimalPlant.airQuality 
+
+                    elif word == "soil":
+                        sqlQuery = sqlQuery + " SoilMoisture < " + optimalPlant.soilMoisture
+
+                    elif word == "light":
+                        sqlQuery = sqlQuery + " LightIntensity < " + optimalPlant.lightIntensity 
+
+            if specificBool != True:
+                sqlQuery = sqlQuery + " WHERE Temperature < " + optimalPlant.temperature + " AND Humidity < " + optimalPlant.humidity + " AND AirQuality < " + optimalPlant.airQuality + " AND SoilMoisture < " + optimalPlant.soilMoisture +  " AND LightIntensity < " + optimalPlant.lightIntensity 
+                    
+            if adjectiveWordList[0] in adjectiveList:
+                if 'month' in clean_tokens:
+                    if 'last' in clean_tokens:
+                        month = str(int(currentMonth)-1)
+                    else:
+                        month = currentMonth
+                        
+                    finalString = " AND Date_n_Time > " + currentYear + "-" + currentMonth + "-1 00:00:00" + " AND Date_n_Time < " + currentYear + "-" + currentMonth + "-" + monthToDayMax[month] + " 11:59:59"
+            optimalBool = True
 
         else:
         
 
             if(test1Words[0] in graphSynonyms):
                 graphBool = True
+
             #finding parameters
             chunk_parameters = nltk.RegexpParser(queryType[1])
             chunk_parameters = chunk_parameters.parse(pos_tags)
@@ -240,13 +310,22 @@ def convertToSql(query):
             chunk_month = chunk_month.parse(pos_tags)
             monthQueryList, monthQueryTagList = p.getNodes("monthQuery",chunk_month)
 
-            for monthQueryPhrase in monthQueryList:
-                if monthQueryPhrase[0] == 'this': 
-                    dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + currentMonth + "-" + "30" + " 11:59:59'"
-                elif monthQueryPhrase[0] == 'last': 
-                    lastMonth = str(int(currentMonth)-1)
-                    dateString = "Date_n_Time > '" + currentYear + "-" + lastMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + lastMonth + "-" + "30" + " 11:59:59'"
+            print('Month query list:')
+            print(monthQueryList)
+            
+            if monthQueryList:
+                if 'month' in monthQueryList[0]:
+                    monthQueryList = monthQueryList[0]
+                    for monthQueryPhrase in monthQueryList:
+                        if monthQueryPhrase == 'this': 
+                            dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + currentMonth + "-" + "30" + " 11:59:59'"
+                        elif monthQueryPhrase == 'last': 
+                            lastMonth = str(int(currentMonth)-1)
+                            dateString = "Date_n_Time > '" + currentYear + "-" + lastMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + lastMonth + "-" + "30" + " 11:59:59'"
 
+            for word in test1Words:
+                if word in plantList:
+                    plantName = word
 
             #final string      
             commaSet = False
@@ -257,7 +336,7 @@ def convertToSql(query):
                 entries.append('SoilMoisture')
                 entries.append('AirQuality')
                 
-                finalString = "SELECT * FROM " + plantDict[test1Words[2]]
+                finalString = "SELECT * FROM " + plantDict[plantName]
             else:
                 finalString = "SELECT ID, Date_n_Time" 
                 for word in test1Words:
@@ -271,6 +350,10 @@ def convertToSql(query):
                     if word in plantList:
                         plantName = word
                 finalString = finalString + " FROM " + plantDict[plantName]
+
+            #see if dateString exist
+            print("Date string:")
+            print(dateString)
 
             if(len(conditionString) > 0 or dateString != None):
                 finalString = finalString + " WHERE "
@@ -297,4 +380,4 @@ def convertToSql(query):
     print(finalString)
 
     #returns the final translated string, and the headings of the parameters
-    return finalString, entries,graphBool,optimalBool
+    return finalString, entries,graphBool,optimalBool, plantName
