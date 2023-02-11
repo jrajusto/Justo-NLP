@@ -27,33 +27,44 @@ class Plant:
 
 
 
-def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
+def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,plantList):
 
     #initial entries list
     entries = ['ID','Date_n_Time']
 
     plantDict = {
-        "tomato":"sensor_node_1_tb",
-        "grape":"sensor_node_2_tb",
-        "wheat":"sensor_node_3_tb",
-        "corn":"sensor_node_4_tb"
+        optimalPlant1.name:"sensor_node_1_tb",
+        optimalPlant2.name:"sensor_node_2_tb",
+        optimalPlant3.name:"sensor_node_3_tb",
+        optimalPlant4.name:"sensor_node_4_tb"
     }
 
     #list of the months
     monthList = ['january','february','march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+    monthListCap = ['January','February','March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     monthToDayMax = {'1':'31','2':'28','3':'31','4':'30','5':'31','6':'30','7':'31','8':'30','9':'31','10':'30','11':'31','12':'30'}
 
-    #list of plants available
-    plantList = ['tomato','grape','wheat','corn']
     #dictionary of the months with number equivalent
-    monthDict = {'january':1,'february':2,'march':3, 'april':4, 'may':5, 'june':6, 'july':7, 'august':8, 'september':9, 'october':10, 'november':11, 'december':12}
+    monthDict = {'January':1,'February':2,'March':3, 'April':4, 'May':5, 'June':6, 'July':7, 'August':8, 'September':9, 'October':10, 'November':11, 'December':12}
     graphBool = False
+    compareBool = False
+    averageBool = False
 
     query = query.lower()
     tokens = preprocess.tokenize(query)
-    #tokens = preprocess.numToWord(tokens)
+
+    for i in range(len(tokens)):
+        if tokens[i] in monthList:
+            tokens[i] = tokens[i].capitalize()
+
     clean_tokens = preprocess.remove_stop_words(tokens)
     lemmatized_tokens = preprocess.lemmatize(clean_tokens)
+
+    for token in lemmatized_tokens:
+        if token == 'mean' or token == 'average':
+            lemmatized_tokens.remove(token)
+            averageBool = True
+
 
     pos_tags = preprocess.pos_tagging(lemmatized_tokens)
 
@@ -61,61 +72,70 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
     orig_pos_tags = preprocess.pos_tagging(tokens)
 
     queryType = []
-    queryType.append(r"queryType1: {<NNP|JJ|NN>*<NN|DT><NN>}") #Display temperature from tomato plant
-    queryType.append(r"parameters: {<NN><JJR|JJ|NN>?<CD><CD>?}") #humidity is greater than 5 from january 5 to january 30
+    queryType.append(r"queryType1: {<NNP|JJ|VB|NN><NN|DT|VBP|VBZ>*<NN|JJ>}") #Display temperature from tomato plant
+    queryType.append(r"parameters: {<NN|JJ|VBD><JJR|JJ|NN|IN|RBR|VBP>?<CD><CD>?}") #humidity is greater than 5 
     queryType.append(r"conjuctions: {<CC>}") #AND OR
     queryType.append(r"adjective: {<JJ>}")
-    queryType.append(r"monthQuery: {<DT|JJ><NN>}") #this month or last month
-
+    queryType.append(r"monthQuery: {<DT|JJ><NN>}") #this month or last 
+    queryType.append(r"withinParameters: {<NN>?<IN><CD><CD>}") #temperature is within 
+    queryType.append(r"date: {<NNP><CD><CD>?}") #from january 5 to january 30
 
     
     #parse the query acording to query type 1
     chunk_parserTest1 = nltk.RegexpParser(queryType[0])
     chunk_parserTest1 = chunk_parserTest1.parse(pos_tags)
-
-    print(chunk_parserTest1)
+    
     
     #test 1 - with action
     test1Words,test1Tags = p.getNodes("queryType1",chunk_parserTest1)
+    print("test1Words")
     print(test1Words)
     test1Words = test1Words[0]
 
     tempTest1Words = []
     finalString = None
+    finalQueries = []
 
     plantName = None
+    plantNames = []
 
     synonyms = wn.synsets('graph')
     graphSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
 
+    synonyms = wn.synsets('compare')
+    compareSynonyms =set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+
     synonyms = wn.synsets('show')
     showSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Show words")
-    print(showSynonyms)
+
+    synonyms = wn.synsets('get')
+    getSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+
+    synonyms = wn.synsets('output')
+    outputSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+
     synonyms = wn.synsets('optimal')
     optimalSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Optimal synonyms")
-    print(optimalSynonyms)
 
     synonyms = wn.synsets('good')
     goodSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Good synonyms")
-    print(goodSynonyms)
 
     synonyms = wn.synsets('greater')
     greaterSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Greater synonyms")
-    print(greaterSynonyms)
+
+    synonyms = wn.synsets('above')
+    aboveSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+
+    synonyms = wn.synsets('more')
+    moreSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
 
     synonyms = wn.synsets('below')
     belowSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Below synonyms")
-    print(belowSynonyms)
 
     synonyms = wn.synsets('equal')
     equalSynonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    print("Below synonyms")
-    print(equalSynonyms)
+
+
 
 
 
@@ -147,38 +167,70 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
     #finding action
     if(len(test1Words) > 0):
 
-        if((test1Words[0] not in showSynonyms) and (test1Words[0] not in graphSynonyms)):
+        #checking for optimal condition if the trigger words for showing or graphing is not seen
+        if((test1Words[0] not in showSynonyms) and (test1Words[0] not in getSynonyms) and (test1Words[0] not in graphSynonyms) and (test1Words[0] not in compareSynonyms) and (test1Words[0] not in outputSynonyms)):
             
+            print('running optimal test')
+            sqlQuery = "SELECT ID, Date_n_Time"
+            specificBool = False
+
             for word in test1Words:
+                if word in parameterList:
+                    specificBool = True
+                    sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+                    
+                    
+            
+            for word in lemmatized_tokens:
+
                 if word in plantList:
+                    print("found the plant")
                     plant = word
+
+
                     chunk_adjective = nltk.RegexpParser(queryType[3])
                     chunk_adjective = chunk_adjective.parse(pos_tags)
+                    
+
                     adjectiveWordList, adjectiveTaglist = p.getNodes("adjective",chunk_adjective)
-                    sensorNode = plantDict[plant]
+
+                    print("adjectiveWordList")
+                    print(adjectiveWordList)
+
                     adjectiveWordList = adjectiveWordList[0]
 
                     if plant == optimalPlant1.name:
-                       optimalPlant = optimalPlant1
-                       sqlQuery="SELECT * FROM sensor_node_1_tb "
+                        optimalPlant = optimalPlant1
+                        if specificBool:
+                            sqlQuery= sqlQuery + " FROM sensor_node_1_tb "
+                        else:
+                            sqlQuery= "SELECT * FROM sensor_node_1_tb "
+                            
                     elif plant == optimalPlant2.name:
                         optimalPlant = optimalPlant2
-                        sqlQuery="SELECT * FROM sensor_node_2_tb "
+                        if specificBool:
+                            sqlQuery= sqlQuery + " FROM sensor_node_2_tb "
+                        else:
+                            sqlQuery= "SELECT * FROM sensor_node_2_tb "
                     elif plant == optimalPlant3.name:
                         optimalPlant = optimalPlant3
-                        sqlQuery="SELECT * FROM sensor_node_3_tb "
+                        if specificBool:
+                            sqlQuery= sqlQuery + " FROM sensor_node_3_tb "
+                        else:
+                            sqlQuery= "SELECT * FROM sensor_node_3_tb "
                     elif plant == optimalPlant4.name:
                         optimalPlant = optimalPlant4
-                        sqlQuery="SELECT * FROM sensor_node_4_tb "
+                        if specificBool:
+                            sqlQuery= sqlQuery + " FROM sensor_node_4_tb "
+                        else:
+                            sqlQuery= "SELECT * FROM sensor_node_4_tb "
 
             whereOnce = False
             andDelay = 0
-            specificBool = False
 
             #add conditions of optimal plant
             for word in test1Words:
                 if word in parameterList:
-                    specificBool = True
                     if whereOnce == False:
                         sqlQuery = sqlQuery + "WHERE"
                         whereOnce = True
@@ -190,39 +242,96 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
                         andDelay = sqlQuery + " AND"
                     
                     if word == "temperature":
-                        sqlQuery = sqlQuery + " Temperature < " + optimalPlant.temperature 
+                        sqlQuery = sqlQuery + " Temperature < " + str(optimalPlant.temperature)
+                        entries.append('Temperature')
 
                     elif word == "humidity":
-                        sqlQuery = sqlQuery + " Humidity < " + optimalPlant.humidity 
+                        sqlQuery = sqlQuery + " Humidity < " + str(optimalPlant.humidity)
+                        entries.append('Humidity')
 
                     elif word == "air":
-                        sqlQuery = sqlQuery + " AirQuality < " + optimalPlant.airQuality 
+                        sqlQuery = sqlQuery + " Air_Quality < " + str(optimalPlant.airQuality)
+                        entries.append('Air_Quality')
 
                     elif word == "soil":
-                        sqlQuery = sqlQuery + " SoilMoisture < " + optimalPlant.soilMoisture
+                        sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
+                        entries.append('Soil_Moisture')
 
                     elif word == "light":
-                        sqlQuery = sqlQuery + " LightIntensity < " + optimalPlant.lightIntensity 
+                        sqlQuery = sqlQuery + " Light_Intensity < " + str(optimalPlant.lightIntensity) 
+                        entries.append('Light_Intensity')
 
             if specificBool != True:
-                sqlQuery = sqlQuery + " WHERE Temperature < " + optimalPlant.temperature + " AND Humidity < " + optimalPlant.humidity + " AND AirQuality < " + optimalPlant.airQuality + " AND SoilMoisture < " + optimalPlant.soilMoisture +  " AND LightIntensity < " + optimalPlant.lightIntensity 
-                    
-            if adjectiveWordList[0] in adjectiveList:
-                if 'month' in clean_tokens:
-                    if 'last' in clean_tokens:
-                        month = str(int(currentMonth)-1)
-                    else:
-                        month = currentMonth
-                        
-                    finalString = " AND Date_n_Time > " + currentYear + "-" + currentMonth + "-1 00:00:00" + " AND Date_n_Time < " + currentYear + "-" + currentMonth + "-" + monthToDayMax[month] + " 11:59:59"
-            optimalBool = True
+                sqlQuery = sqlQuery + " WHERE Temperature < " + str(optimalPlant.temperature) + " AND Humidity < " + str(optimalPlant.humidity) + " AND Air_Quality < " +str(optimalPlant.airQuality) + " AND Soil_Moisture < " + str(optimalPlant.soilMoisture) +  " AND Light_Intensity < " +str(optimalPlant.lightIntensity)
+                entries.append('Temperature')
+                entries.append('Humidity')
+                entries.append('Light_Intensity')
+                entries.append('Soil_Moisture')
+                entries.append('Air_Quality')
 
-        else:
+
+
+            if 'month' in clean_tokens: #last month token
+                year = currentYear
+                if 'last' in clean_tokens or 'previous' in clean_tokens:
+                    
+                    if currentMonth == "01":
+                        month = "12"
+                        year = str(int(currentYear)-1)
+                    else:   
+                        month = str(int(currentMonth)-1)
+                        year = currentYear
+                else:
+                    month = str(currentMonth)
+                    
+                        
+                sqlQuery = sqlQuery + " AND Date_n_Time > '" + year + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + year + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
+            
+                if 'today' in clean_tokens:
+                    month = str(currentMonth)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
+
+                if 'yesterday' in clean_tokens:
+                    month = str(currentMonth)
+                    yesterday = str(int(currentDay)-1)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
+
+            finalString = sqlQuery
+            optimalBool = True
+            
+
+        else: #not optimal condition
         
 
             if(test1Words[0] in graphSynonyms):
                 graphBool = True
+                
+            if(test1Words[0] in compareSynonyms):
+                compareBool = True
 
+            
+            #finding between parameters
+            chunk_parameters = nltk.RegexpParser(queryType[5])
+            chunk_parameters = chunk_parameters.parse(pos_tags)
+            
+            withinParameterWordList, withinParameterTagWordList = p.getNodes("withinParameters",chunk_parameters)
+            print("within Parameter word list: ")
+            print(withinParameterWordList)
+
+            if withinParameterWordList:
+                withinParameterWordList = withinParameterWordList[0]
+                if withinParameterWordList[0] in parameterList:
+                    withinParameter =  withinParameterWordList[0]
+                    withinParameterExist = True
+                    withinParameterWordList.pop(0)
+                    withinParameterWordList.pop(0)
+                    withinValues = withinParameterWordList
+                else:
+                    withinParameterExist = False
+                    withinParameterWordList.pop(0)
+                    withinParameterWordList.pop(0)
+                    withinValues = withinParameterWordList
+                        
             #finding parameters
             chunk_parameters = nltk.RegexpParser(queryType[1])
             chunk_parameters = chunk_parameters.parse(pos_tags)
@@ -234,23 +343,35 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
             
             conditionString = []
 
+            if len(withinParameterWordList) < 1:
+                for wordList in parameterWordList:
 
-            for wordList in parameterWordList:
-                print("wordList")
-                print(wordList)
+                    if wordList[0] in parameterList:
+                        if wordList[1] == operationList[0] or wordList[1] in greaterSynonyms or wordList[1] in aboveSynonyms or wordList[1] in moreSynonyms:
+                            conditionString.append(parameterToSQL[wordList[0]] +' > ' + str(w2n.word_to_num(wordList[2])))
+                        elif wordList[1] == operationList[1] or wordList[1] in belowSynonyms:
+                            conditionString.append(parameterToSQL[wordList[0]] +' < ' + str(w2n.word_to_num(wordList[2])))
+                        elif wordList[1] == operationList[2] or wordList[1] in equalSynonyms:
+                            conditionString.append(parameterToSQL[wordList[0]] +' = ' + str(w2n.word_to_num(wordList[2])))
+                        else:
+                            conditionString.append(parameterToSQL[wordList[0]] +' = ' + str(w2n.word_to_num(wordList[1])))
+                        print("condition string: ")
+                        print(conditionString)
+                        #condition name is not given
+                    elif int(wordList[2]):
+                        parameterUsed = test1Words[1]
 
-                if wordList[0] in parameterList:
-                    if wordList[1] == operationList[0] or wordList[1] in greaterSynonyms:
-                        conditionString.append(wordList[0]+' > ' + str(w2n.word_to_num(wordList[2])))
-                    elif wordList[1] == operationList[1] or wordList[1] in belowSynonyms:
-                        conditionString.append(wordList[0]+' < ' + str(w2n.word_to_num(wordList[2])))
-                    elif wordList[1] == operationList[2] or wordList[1] in equalSynonyms:
-                        conditionString.append(wordList[0]+' = ' + str(w2n.word_to_num(wordList[2])))
-                    else:
-                        conditionString.append(wordList[0]+' = ' + str(w2n.word_to_num(wordList[1])))
-                    print("condition string: ")
-                    print(conditionString)
-                        
+                        if wordList[1] == operationList[0] or wordList[1] in greaterSynonyms or wordList[1] in aboveSynonyms or wordList[1] in moreSynonyms:
+                            conditionString.append(parameterToSQL[parameterUsed] +' > ' + str(w2n.word_to_num(wordList[2])))
+                        elif wordList[1] == operationList[1] or wordList[1] in belowSynonyms:
+                            conditionString.append(parameterToSQL[parameterUsed] +' < ' + str(w2n.word_to_num(wordList[2])))
+                        elif wordList[1] == operationList[2] or wordList[1] in equalSynonyms:
+                            conditionString.append(parameterToSQL[parameterUsed] +' = ' + str(w2n.word_to_num(wordList[2])))
+                        else:
+                            conditionString.append(parameterToSQL[parameterUsed] +' = ' + str(w2n.word_to_num(wordList[1])))
+                        print("condition string: ")
+                        print(conditionString)
+
             #finding conjunctions
             chunk_conjuctions = nltk.RegexpParser(queryType[2])
             chunk_conjuctions = chunk_conjuctions.parse(orig_pos_tags)
@@ -266,10 +387,24 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
 
             dateList = []
 
-            for wordList in parameterWordList:
-                if wordList[0] in monthList:
-                    dateList.append(wordList)
+            #finding between parameters
+            chunk_parameters = nltk.RegexpParser(queryType[6])
+            chunk_parameters = chunk_parameters.parse(pos_tags)
+            
+            dateWordList, dateTagList = p.getNodes("date",chunk_parameters)
 
+            print("date word list: ")
+            print(dateWordList)
+
+            if dateWordList:
+                for wordList in dateWordList:
+                    if wordList[0].lower() in monthList:
+                        dateList.append(wordList)
+            else:
+                for word in clean_tokens:
+                    if word in monthListCap:
+                        month = str(monthDict[word])
+                        dateString = "Date_n_Time > '" + currentYear + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
             #if there are two dates given
             if len(dateList) == 2:
                 firstDate = dateList[0]
@@ -301,9 +436,19 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
             elif len(dateList) == 1:
                 theDate = dateList[0]
                 if len(theDate) == 3:
-                    dateString = "Date_n_Time = '" + str(theDate[2]) + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) 
+                    dateString = "Date_n_Time > '" + str(theDate[2]) + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) + " 00:00:00' AND Date_n_Time < '" + str(theDate[2]) + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) + " 23:59:59'"
                 else:
-                    dateString = "Date_n_Time = '" + currentYear + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) 
+                    dateString = "Date_n_Time > '" + currentYear + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) + " 00:00:00' AND Date_n_Time < '" + currentYear + "-" + str(monthDict[theDate[0]]) + "-" +  str(theDate[1]) + " 23:59:59'"
+
+            #if asked for data today
+            if 'today' in lemmatized_tokens:
+                    month = str(currentMonth)
+                    dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + currentMonth + "-" + currentDay +" 23:59:59'"
+
+            if 'yesterday' in lemmatized_tokens:
+                    month = str(currentMonth)
+                    yesterday = str(int(currentDay)-1)
+                    dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + currentMonth + "-" + yesterday +" 23:59:59'"
 
             #finding query with this month or last month
             chunk_month = nltk.RegexpParser(queryType[4])
@@ -314,42 +459,72 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
             print(monthQueryList)
             
             if monthQueryList:
-                if 'month' in monthQueryList[0]:
-                    monthQueryList = monthQueryList[0]
-                    for monthQueryPhrase in monthQueryList:
-                        if monthQueryPhrase == 'this': 
-                            dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + currentMonth + "-" + "30" + " 11:59:59'"
-                        elif monthQueryPhrase == 'last': 
-                            lastMonth = str(int(currentMonth)-1)
-                            dateString = "Date_n_Time > '" + currentYear + "-" + lastMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + "2022" + "-" + lastMonth + "-" + "30" + " 11:59:59'"
+                for monthQuery in monthQueryList:
+                    if 'month' in monthQuery:
+                        for monthQueryPhrase in monthQuery:
+                            if monthQueryPhrase == 'this': 
+                                dateString = "Date_n_Time > '" + currentYear + "-" + currentMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + currentMonth + "-" + "30" + " 23:59:59'"
+                            elif monthQueryPhrase == 'last' or monthQueryPhrase == 'previous': 
+                                lastMonth = str(int(currentMonth)-1)
+                                if lastMonth == '0':
+                                    lastMonth = "12"
+                                    currentYear= str(int(currentYear)-1)
+                                dateString = "Date_n_Time > '" + currentYear + "-" + lastMonth + "-1 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + lastMonth + "-" + "30" + " 23:59:59'"
 
-            for word in test1Words:
+            
+            #find plant name in test1 words
+            for word in clean_tokens:
                 if word in plantList:
-                    plantName = word
+                    plantNames.append(word)
+            
+            if not plantName:
+                for plant in plantList:
+                    plantNames.append(plant)
 
             #final string      
             commaSet = False
             if test1Words[1] == "everything" or test1Words[1] == 'all':
                 entries.append('Temperature')
                 entries.append('Humidity')
-                entries.append('LightIntensity')
-                entries.append('SoilMoisture')
-                entries.append('AirQuality')
+                entries.append('Light_Intensity')
+                entries.append('Soil_Moisture')
+                entries.append('Air_Quality')
                 
-                finalString = "SELECT * FROM " + plantDict[plantName]
+                finalString = "SELECT * FROM " + plantDict[plantNames[0]]
             else:
                 finalString = "SELECT ID, Date_n_Time" 
+                showSpecified = False
                 for word in test1Words:
 
                     if word in parameterList:
                         entries.append(parameterToSQL[word])
                         finalString = finalString + ", "
                         finalString = finalString + parameterToSQL[word]
+                        showSpecified = True
 
-                for word in test1Words:
-                    if word in plantList:
-                        plantName = word
-                finalString = finalString + " FROM " + plantDict[plantName]
+
+                        if withinParameterWordList:
+                            if withinParameterExist == False:
+                                withinParameter = parameterToSQL[word]
+                
+                #if paramter shown not specified
+                if showSpecified == False:
+                    for word in lemmatized_tokens:
+                        if word in parameterList:
+                            entries.append(parameterToSQL[word])
+                            finalString = finalString + ", "
+                            finalString = finalString + parameterToSQL[word]
+
+ 
+                try:
+                    finalString = finalString + " FROM " + plantDict[plantNames[0]]
+                except:
+                    print("***plant not found***")
+                
+
+            if withinParameterWordList:
+                conditionString.append(withinParameter + " > " + withinValues[0] + " AND " + withinParameter + " < " + withinValues[1])
+
 
             #see if dateString exist
             print("Date string:")
@@ -364,7 +539,7 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
             conjunctionListNum = 0
             for i in range(len(conditionString)):
                 finalString = finalString + conditionString[i] + " "
-                if i < len(conditionString) - 1:
+                if i < len(conditionString) - 1 and len(withinParameterWordList) < 1:
                     finalString = finalString  + conjunctionList[conjunctionListNum][0].upper() + " "
                 conjunctionListNum = conjunctionListNum + 1
 
@@ -378,6 +553,12 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4):
                     finalString = finalString + " AND " + dateString
             
     print(finalString)
+    finalQueries.append(finalString)
+    if len(plantNames) > 1:
+        for i in range(1,len(plantNames)):
+            finalQueries.append(finalString.replace(plantDict[plantNames[0]],plantDict[plantNames[i]]))
+
 
     #returns the final translated string, and the headings of the parameters
-    return finalString, entries,graphBool,optimalBool, plantName
+    print(finalQueries, entries,graphBool,compareBool,optimalBool, averageBool,plantNames)
+    return finalQueries, entries,graphBool,compareBool,optimalBool,averageBool, plantNames

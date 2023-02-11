@@ -36,15 +36,25 @@ optimalPlant2 = Plant('grape',75,30,60,80,200)
 optimalPlant3 = Plant('wheat',75,30,60,80,200)
 optimalPlant4 = Plant('corn',75,30,60,80,200)
 
+#list of plants available
+plantList = ['tomato','grape','wheat','corn']
+averageList = []
+
+SQLtoParameter = {'Temperature':'temperature','Humidity':'humidity','Air_Quality':'air quality','Soil_Moisture':'soil moisture','Light_Intensity':'light'}
+
 def editOptimal(name,hum,temp,soil,air,lux,node):
     if node == 1:
         optimalPlant1.setOptimal(name,hum,temp,soil,air,lux)
+        plantList[0] = name
     elif node == 2:
         optimalPlant2.setOptimal(name,hum,temp,soil,air,lux)
+        plantList[1] = name
     elif node == 3:
         optimalPlant3.setOptimal(name,hum,temp,soil,air,lux)
+        plantList[2] = name
     elif node == 4:
         optimalPlant4.setOptimal(name,hum,temp,soil,air,lux)
+        plantList[3] = name
 
 def openOptimalWindow():
     optimalWindow = Toplevel(root)
@@ -292,14 +302,35 @@ def readmic():
     global query
     global speakingBox
     query = s.readMicrophone()
+    
+    try:
+        outputQuerytext
+    except:
+        print('DNE')
+    else:
+        outputQuerytext.grid_forget()
+
+    try:
+        outputAnswer
+    except:
+        print('DNE')
+    else:
+        outputAnswer.pack_forget()
     printQuery()
     speakFrame.destroy()
 
 #create table from sql output
-def createTable(output):
+def createTable(output,plantName):
+
+    global outputPlantDataFrame
+    outputPlantDataFrame = LabelFrame(outputDataFrame,text = plantName)
+    outputPlantDataFrame.size()
+    outputPlantDataFrame.pack()
+
+    
     global tableFrame
 
-    tableFrame = Frame(outputDataFrame)
+    tableFrame = Frame(outputPlantDataFrame)
     tableFrame.pack(side=tkinter.LEFT,padx=1)
 
     headings = ttk.Treeview(tableFrame,columns=tuple(headingList),show="headings")
@@ -325,9 +356,13 @@ def translateQuery():
     global headingList
     global graphBool
     global optimalBool
-    global plantName
+    global compareBool
+    global plantNames
     global outputAnswer
     global tableFrame
+    global plantNo
+
+    
 
     try:
         tableFrame
@@ -336,121 +371,185 @@ def translateQuery():
     else:
         tableFrame.pack_forget()
 
-    sqlQuery,headingList,graphBool,optimalBool,plantName = translate.convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4)
-    myCursor.execute(sqlQuery)
-    output = myCursor.fetchall()
-    createTable(output)
     
-    print('Graph state')
-    print(graphBool)
 
-    if graphBool:
-        df = pd.DataFrame (output, columns = headingList)
+    sqlQueries,headingList,graphBool,compareBool,optimalBool,averageBool,plantNames = translate.convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,plantList)
+    
+    plantNo = 0
+    for sqlQuery in sqlQueries:
+        
+        myCursor.execute(sqlQuery)
+        output = myCursor.fetchall()
+        #if output exist, create the table
+        if output:
+            createTable(output,plantNames[plantNo])
+            
         print(headingList)
-        headingList.remove('ID')
-        headingList.remove('Date_n_Time')
+        print('Graph state')
+        print(graphBool)
 
-        if len(headingList) > 1:
-            figure, axis = plt.subplots(len(headingList))
+        if graphBool:
+
+            if output:
+                df = pd.DataFrame (output, columns = headingList)
+                headingList.remove('ID')
+                headingList.remove('Date_n_Time')
+
+                if len(headingList) > 1:
+                    figure, axis = plt.subplots(len(headingList))
+
+                    headingNo = 0
+                    for heading in headingList:
+                        axis[headingNo].plot(df['Date_n_Time'],df[heading])
+                        axis[headingNo].set_title(heading + " of " + plantNames[plantNo])
+                        headingNo = headingNo + 1
+                else:
+                    plt.plot(df['Date_n_Time'],df[headingList[0]])
+                    plt.title(headingList[0] + " of " + plantNames[plantNo])
+
+                plt.tight_layout(h_pad=0.55)
+                plt.show()
+
+                headingList.insert(0,'ID')
+                headingList.insert(1,'Date_n_Time')
+            else:
+                printAnswer("There is no data to show.")
+        if compareBool:
+            
+            df = pd.DataFrame (output, columns = headingList)
+            print(headingList)
+            headingList.remove('ID')
+            headingList.remove('Date_n_Time')
 
             headingNo = 0
             for heading in headingList:
-                axis[headingNo].plot(df['Date_n_Time'],df[heading])
-                axis[headingNo].set_title(heading)
+                plt.plot(df['Date_n_Time'],df[heading])
+                #axis[headingNo].set_title(heading)
                 headingNo = headingNo + 1
-        else:
-            plt.plot(df['Date_n_Time'],df[headingList[0]])
-            plt.set_title(headingList[0])
 
-        plt.tight_layout(h_pad=0.55)
-        plt.show()
+            plt.tight_layout(h_pad=0.55)
+            plt.legend(headingList)
+            plt.show()
 
-    if optimalBool:
-        printAnswer("test")
-        print(output)
+        if optimalBool:
+            #if output is empty
+            if not output:
+                printAnswer("The plants has reached optimal condition.")
+            else:
+                printAnswer("The plants has not reached optimal condition in these occasions.")
 
-#gui initialization
-root = Tk()
-root.title("Prototype")
+            print(output)
+
+        
+        if averageBool:
+            df = pd.DataFrame (output, columns = headingList)
+            print(headingList)
+            headingList.remove('ID')
+            headingList.remove('Date_n_Time')
+
+            headingNo = 0
+            outputSentence = ""
+            for heading in headingList:
+                outputSentence = outputSentence + "The average " + SQLtoParameter[heading] + " is " + str(round(df[heading].mean(),2)) + ". "
+
+            printAnswer(outputSentence)
+
+        plantNo = plantNo + 1
+
+    
+            
+            
+
+
+    
+
+
 
 
 #database initialization
-db = mysql.connector.connect(host="localhost",user="root",password="",database="sensornetwork")
-myCursor = db.cursor()
+try:
+    db = mysql.connector.connect(host="localhost",user="root",password="",database="sensornetwork")
+except:
+    print("MySQL connection is not found.")
+else:
+    #gui initialization
+    root = Tk()
+    root.title("Prototype")
+    root.geometry("750x400")
+    myCursor = db.cursor()
 
-#global variables
-queryView = False
+    #global variables
+    queryView = False
 
-#first window
-firstWindow = LabelFrame(root)
-firstWindow.grid(row=0,column=0)
+    #first window
+    firstWindow = LabelFrame(root)
+    firstWindow.grid(row=0,column=0)
 
-#second window
-secondWindow = LabelFrame(root,text="Optimal conditions")
-secondWindow.grid(row=0,column=1,sticky='n')
-
-
-#showOptimal button
-showOptimal = Button(secondWindow,text="Show optimal conditions",command=openOptimalWindow)
-showOptimal.pack()
-
-#input query frame
-inputQueryFrame = LabelFrame(firstWindow,text="Input Query",padx=5,pady=5)
-inputQueryFrame.pack(anchor=W)
-
-#input query text box
-inputQuery = Entry(inputQueryFrame,width=50)
-inputQuery.grid(row=0,column=0)
-
-    #query = "Show the core temperature from the grapes plants where humidity is greater than 20 and temperature is less than 30 in december 2 to december 7 2021"
-    #query = "Show the core temperature from the grapes plants where humidity is greater than 20 in december 2 to december 7 2021"
-    #query = "Show the core temperature from the grapes plants where humidity is greater than 20 in december 2 2021 to december 7 2021
-    #query = "Show all from the grapes plants" 
-    #query = "Has the tomato plants maintain optimal codition last month"
-    #query = "Show the core temperature from the corn plants"
-    #query = "Show the core temperature from the corn plants this month"
-    #query = "Graph the core temperature and humidity from the corn plants"
-
-inputQuery.insert(0,"Graph the core temperature and humidity from the corn plants")
-
-#enter button
-enterButton = Button(inputQueryFrame,text="Enter",command=getInputQuery,padx=10)
-enterButton.grid(row=0,column=1)
+    #second window
+    secondWindow = LabelFrame(root,text="Optimal conditions")
+    secondWindow.grid(row=0,column=1,sticky='n')
 
 
-#speak query frame
-speakQueryFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Speak Query')
-speakQueryFrame.pack(anchor=W)
+    #showOptimal button
+    showOptimal = Button(secondWindow,text="Show optimal conditions",command=openOptimalWindow)
+    showOptimal.pack()
+
+    #input query frame
+    inputQueryFrame = LabelFrame(firstWindow,text="Input Query",padx=5,pady=5)
+    inputQueryFrame.pack(anchor=W)
+
+    #input query text box
+    inputQuery = Entry(inputQueryFrame,width=50)
+    inputQuery.grid(row=0,column=0)
+
+        #query = "Show the core temperature from the grapes plants where humidity is greater than 20 and temperature is less than 30 in december 2 to december 7 2021"
+        #query = "Show the core temperature from the grapes plants where humidity is greater than 20 in december 2 to december 7 2021"
+        #query = "Show the core temperature from the grapes plants where humidity is greater than 20 in december 2 2021 to december 7 2021
+        #query = "Show all from the grapes plants" 
+        #query = "Has the tomato plants maintain optimal codition last month"
+        #query = "Show the core temperature from the corn plants"
+        #query = "Show the core temperature from the corn plants this month"
+        #query = "Graph the core temperature and humidity from the corn plants"
+        #query = "Compare the core temperature and humidity from the corn plants"
+        #query = "Show humidity from corn within 30 and 60"
+        #query = "Show humidity from corn where temperature is between 30 and 60"
+
+    inputQuery.insert(0,"Show humidity from corn within 30 and 60")
+
+    #enter button
+    enterButton = Button(inputQueryFrame,text="Enter",command=getInputQuery,padx=10)
+    enterButton.grid(row=0,column=1)
 
 
-speakLabel = Label(speakQueryFrame,text = "Press the button and state your query")
-speakLabel.grid(row=1,column=0)
-
-#speak button
-speakButton = Button(speakQueryFrame, text = "Speak",command=speak, padx=10)
-speakButton.grid(row=1,column=1)
-
-#Output query frame
-outputQueryFrame = LabelFrame(firstWindow,padx=5,pady=5,text='You entered the query')
-outputQueryFrame.pack(anchor=W)
-
-#Output answer frame
-outputAnswerFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Answer')
-outputAnswerFrame.pack(anchor=W)
-
-#Output data frame
-outputDataFrame = LabelFrame(firstWindow,text = 'Output Data')
-outputDataFrame.size()
-outputDataFrame.pack()
+    #speak query frame
+    speakQueryFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Speak Query')
+    speakQueryFrame.pack(anchor=W)
 
 
-#Output data graph
-outputDataGraph = LabelFrame(firstWindow,text = 'Output Data Graph')
-outputDataGraph.pack()
+    speakLabel = Label(speakQueryFrame,text = "Press the button and state your query")
+    speakLabel.grid(row=1,column=0)
 
+    #speak button
+    speakButton = Button(speakQueryFrame, text = "Speak",command=speak, padx=10)
+    speakButton.grid(row=1,column=1)
 
+    #Output query frame
+    outputQueryFrame = LabelFrame(firstWindow,padx=5,pady=5,text='You entered the query')
+    outputQueryFrame.pack(anchor=W)
 
+    #Output answer frame
+    outputAnswerFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Answer')
+    outputAnswerFrame.pack(anchor=W)
 
+    #Output data frame
+    outputDataFrame = Frame(firstWindow)
+    outputDataFrame.size()
+    outputDataFrame.pack()
 
+    #Output data graph
+    outputDataGraph = LabelFrame(firstWindow,text = 'Output Data Graph')
+    outputDataGraph.pack()
 
-root.mainloop()
+    
+
+    root.mainloop()
