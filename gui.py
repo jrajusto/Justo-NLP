@@ -361,15 +361,19 @@ def translateQuery():
     global outputAnswer
     global tableFrame
     global plantNo
-
+    global outputDataFrame
     
 
     try:
-        tableFrame
+        outputDataFrame
     except:
-        print('DNE')
+        #Output data frame
+        outputDataFrame = Frame(firstWindow)
+        outputDataFrame.pack()
     else:
-        tableFrame.pack_forget()
+        outputDataFrame.pack_forget()
+        outputDataFrame = Frame(firstWindow)
+        outputDataFrame.pack()
 
     
 
@@ -431,6 +435,9 @@ def translateQuery():
             plt.legend(headingList)
             plt.show()
 
+            headingList.insert(0,'ID')
+            headingList.insert(1,'Date_n_Time')
+
         if optimalBool:
             #if output is empty
             if not output:
@@ -454,17 +461,12 @@ def translateQuery():
 
             printAnswer(outputSentence)
 
+            headingList.insert(0,'ID')
+            headingList.insert(1,'Date_n_Time')
+
         plantNo = plantNo + 1
 
     
-            
-            
-
-
-    
-
-
-
 
 #database initialization
 try:
@@ -475,7 +477,7 @@ else:
     #gui initialization
     root = Tk()
     root.title("Prototype")
-    root.geometry("750x400")
+    #root.geometry("750x400")
     myCursor = db.cursor()
 
     #global variables
@@ -541,10 +543,6 @@ else:
     outputAnswerFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Answer')
     outputAnswerFrame.pack(anchor=W)
 
-    #Output data frame
-    outputDataFrame = Frame(firstWindow)
-    outputDataFrame.size()
-    outputDataFrame.pack()
 
     #Output data graph
     outputDataGraph = LabelFrame(firstWindow,text = 'Output Data Graph')

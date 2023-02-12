@@ -171,21 +171,24 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
         if((test1Words[0] not in showSynonyms) and (test1Words[0] not in getSynonyms) and (test1Words[0] not in graphSynonyms) and (test1Words[0] not in compareSynonyms) and (test1Words[0] not in outputSynonyms)):
             
             print('running optimal test')
-            sqlQuery = "SELECT ID, Date_n_Time"
-            specificBool = False
-
-            for word in test1Words:
-                if word in parameterList:
-                    specificBool = True
-                    sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+            
                     
                     
             
             for word in lemmatized_tokens:
 
                 if word in plantList:
+                    
                     print("found the plant")
-                    plant = word
+                    plantNames.append(word)
+
+                    sqlQuery = "SELECT ID, Date_n_Time"
+                    specificBool = False
+
+                    for word in test1Words:
+                        if word in parameterList:
+                            specificBool = True
+                            sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
 
 
                     chunk_adjective = nltk.RegexpParser(queryType[3])
@@ -199,106 +202,106 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
 
                     adjectiveWordList = adjectiveWordList[0]
 
-                    if plant == optimalPlant1.name:
+                    if plantNames[0] == optimalPlant1.name:
                         optimalPlant = optimalPlant1
                         if specificBool:
                             sqlQuery= sqlQuery + " FROM sensor_node_1_tb "
                         else:
                             sqlQuery= "SELECT * FROM sensor_node_1_tb "
                             
-                    elif plant == optimalPlant2.name:
+                    elif plantNames[0] == optimalPlant2.name:
                         optimalPlant = optimalPlant2
                         if specificBool:
                             sqlQuery= sqlQuery + " FROM sensor_node_2_tb "
                         else:
                             sqlQuery= "SELECT * FROM sensor_node_2_tb "
-                    elif plant == optimalPlant3.name:
+                    elif plantNames[0] == optimalPlant3.name:
                         optimalPlant = optimalPlant3
                         if specificBool:
                             sqlQuery= sqlQuery + " FROM sensor_node_3_tb "
                         else:
                             sqlQuery= "SELECT * FROM sensor_node_3_tb "
-                    elif plant == optimalPlant4.name:
+                    elif plantNames[0] == optimalPlant4.name:
                         optimalPlant = optimalPlant4
                         if specificBool:
                             sqlQuery= sqlQuery + " FROM sensor_node_4_tb "
                         else:
                             sqlQuery= "SELECT * FROM sensor_node_4_tb "
 
-            whereOnce = False
-            andDelay = 0
+                    whereOnce = False
+                    andDelay = 0
 
-            #add conditions of optimal plant
-            for word in test1Words:
-                if word in parameterList:
-                    if whereOnce == False:
-                        sqlQuery = sqlQuery + "WHERE"
-                        whereOnce = True
+                    #add conditions of optimal plant
+                    for word in test1Words:
+                        if word in parameterList:
+                            if whereOnce == False:
+                                sqlQuery = sqlQuery + "WHERE"
+                                whereOnce = True
 
-                    if andDelay == 0:
-                        andDelay = 1
-                    
-                    if andDelay == 1:
-                        andDelay = sqlQuery + " AND"
-                    
-                    if word == "temperature":
-                        sqlQuery = sqlQuery + " Temperature < " + str(optimalPlant.temperature)
+                            if andDelay == 0:
+                                andDelay = 1
+                            
+                            if andDelay == 1:
+                                andDelay = sqlQuery + " OR"
+                            
+                            if word == "temperature":
+                                sqlQuery = sqlQuery + " Temperature < " + str(optimalPlant.temperature)
+                                entries.append('Temperature')
+
+                            elif word == "humidity":
+                                sqlQuery = sqlQuery + " Humidity < " + str(optimalPlant.humidity)
+                                entries.append('Humidity')
+
+                            elif word == "air":
+                                sqlQuery = sqlQuery + " Air_Quality < " + str(optimalPlant.airQuality)
+                                entries.append('Air_Quality')
+
+                            elif word == "soil":
+                                sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
+                                entries.append('Soil_Moisture')
+
+                            elif word == "light":
+                                sqlQuery = sqlQuery + " Light_Intensity < " + str(optimalPlant.lightIntensity) 
+                                entries.append('Light_Intensity')
+
+                    if specificBool != True:
+                        sqlQuery = sqlQuery + " WHERE Temperature < " + str(optimalPlant.temperature) + " OR Humidity < " + str(optimalPlant.humidity) + " OR Air_Quality < " +str(optimalPlant.airQuality) + " OR Soil_Moisture < " + str(optimalPlant.soilMoisture) +  " OR Light_Intensity < " +str(optimalPlant.lightIntensity)
                         entries.append('Temperature')
-
-                    elif word == "humidity":
-                        sqlQuery = sqlQuery + " Humidity < " + str(optimalPlant.humidity)
                         entries.append('Humidity')
-
-                    elif word == "air":
-                        sqlQuery = sqlQuery + " Air_Quality < " + str(optimalPlant.airQuality)
+                        entries.append('Light_Intensity')
+                        entries.append('Soil_Moisture')
                         entries.append('Air_Quality')
 
-                    elif word == "soil":
-                        sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
-                        entries.append('Soil_Moisture')
-
-                    elif word == "light":
-                        sqlQuery = sqlQuery + " Light_Intensity < " + str(optimalPlant.lightIntensity) 
-                        entries.append('Light_Intensity')
-
-            if specificBool != True:
-                sqlQuery = sqlQuery + " WHERE Temperature < " + str(optimalPlant.temperature) + " AND Humidity < " + str(optimalPlant.humidity) + " AND Air_Quality < " +str(optimalPlant.airQuality) + " AND Soil_Moisture < " + str(optimalPlant.soilMoisture) +  " AND Light_Intensity < " +str(optimalPlant.lightIntensity)
-                entries.append('Temperature')
-                entries.append('Humidity')
-                entries.append('Light_Intensity')
-                entries.append('Soil_Moisture')
-                entries.append('Air_Quality')
 
 
-
-            if 'month' in clean_tokens: #last month token
-                year = currentYear
-                if 'last' in clean_tokens or 'previous' in clean_tokens:
-                    
-                    if currentMonth == "01":
-                        month = "12"
-                        year = str(int(currentYear)-1)
-                    else:   
-                        month = str(int(currentMonth)-1)
+                    if 'month' in clean_tokens: #last month token
                         year = currentYear
-                else:
-                    month = str(currentMonth)
+                        if 'last' in clean_tokens or 'previous' in clean_tokens:
+                            
+                            if currentMonth == "01":
+                                month = "12"
+                                year = str(int(currentYear)-1)
+                            else:   
+                                month = str(int(currentMonth)-1)
+                                year = currentYear
+                        else:
+                            month = str(currentMonth)
+                            
+                                
+                        sqlQuery = sqlQuery + " AND Date_n_Time > '" + year + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + year + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
                     
-                        
-                sqlQuery = sqlQuery + " AND Date_n_Time > '" + year + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + year + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
-            
-                if 'today' in clean_tokens:
-                    month = str(currentMonth)
-                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
+                        if 'today' in clean_tokens:
+                            month = str(currentMonth)
+                            sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
 
-                if 'yesterday' in clean_tokens:
-                    month = str(currentMonth)
-                    yesterday = str(int(currentDay)-1)
-                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
+                        if 'yesterday' in clean_tokens:
+                            month = str(currentMonth)
+                            yesterday = str(int(currentDay)-1)
+                            sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
 
-            finalString = sqlQuery
-            optimalBool = True
-            
+                    finalQueries.append(sqlQuery)
+                    optimalBool = True
+
 
         else: #not optimal condition
         
@@ -477,7 +480,7 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 if word in plantList:
                     plantNames.append(word)
             
-            if not plantName:
+            if not plantNames:
                 for plant in plantList:
                     plantNames.append(plant)
 
@@ -552,11 +555,11 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 else:
                     finalString = finalString + " AND " + dateString
             
-    print(finalString)
-    finalQueries.append(finalString)
-    if len(plantNames) > 1:
-        for i in range(1,len(plantNames)):
-            finalQueries.append(finalString.replace(plantDict[plantNames[0]],plantDict[plantNames[i]]))
+            print(finalString)
+            finalQueries.append(finalString)
+            if len(plantNames) > 1:
+                for i in range(1,len(plantNames)):
+                    finalQueries.append(finalString.replace(plantDict[plantNames[0]],plantDict[plantNames[i]]))
 
 
     #returns the final translated string, and the headings of the parameters
