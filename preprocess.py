@@ -54,6 +54,13 @@ def remove_stop_words(tokens):
     custom_stopwords.append('moisture')
     custom_stopwords.append('core')
     custom_stopwords.append('intensity')
+    custom_stopwords.append('reading')
+    custom_stopwords.append('respect')
+    custom_stopwords.remove('between')
+    custom_stopwords.remove('more')
+    custom_stopwords.append('generate')
+    custom_stopwords.append('me')
+
     new_tokens = [word for word in tokens if word not in custom_stopwords]
     
     #removes punctuations

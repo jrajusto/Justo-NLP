@@ -363,6 +363,13 @@ def translateQuery():
     global plantNo
     global outputDataFrame
     
+    
+    try:
+        outputAnswer
+    except:
+        print('DNE')
+    else:
+        outputAnswer.pack_forget()
 
     try:
         outputDataFrame
@@ -491,7 +498,6 @@ else:
     secondWindow = LabelFrame(root,text="Optimal conditions")
     secondWindow.grid(row=0,column=1,sticky='n')
 
-
     #showOptimal button
     showOptimal = Button(secondWindow,text="Show optimal conditions",command=openOptimalWindow)
     showOptimal.pack()
@@ -515,8 +521,10 @@ else:
         #query = "Compare the core temperature and humidity from the corn plants"
         #query = "Show humidity from corn within 30 and 60"
         #query = "Show humidity from corn where temperature is between 30 and 60"
+        #query = "Has the tomato and corn plant reached optimal conditions"
+        #query = "Show humidity from corn greater 30 degrees temperature"
 
-    inputQuery.insert(0,"Show humidity from corn within 30 and 60")
+    inputQuery.insert(0,"Has the tomato and corn plant reached optimal conditions")
 
     #enter button
     enterButton = Button(inputQueryFrame,text="Enter",command=getInputQuery,padx=10)
