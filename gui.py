@@ -258,14 +258,6 @@ def getInputQuery():
     else:
         outputQuerytext.grid_forget()
 
-    try:
-        outputAnswer
-    except:
-        print('DNE')
-    else:
-        outputAnswer.pack_forget()
-    
-    
     printQuery()
         
 #shows the input query to be translated on screen
@@ -280,6 +272,9 @@ def printQuery():
 
 def printAnswer(answer):
     global outputAnswer
+    global outputAnswerFrame
+    
+
     outputAnswer = Label(outputAnswerFrame,text=answer)
     outputAnswer.pack()
 
@@ -310,12 +305,6 @@ def readmic():
     else:
         outputQuerytext.grid_forget()
 
-    try:
-        outputAnswer
-    except:
-        print('DNE')
-    else:
-        outputAnswer.pack_forget()
     printQuery()
     speakFrame.destroy()
 
@@ -362,15 +351,22 @@ def translateQuery():
     global tableFrame
     global plantNo
     global outputDataFrame
+    global outputAnswerFrame
     
     
     try:
-        outputAnswer
+        outputAnswerFrame
     except:
         print('DNE')
+        outputAnswerFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Answer')
+        outputAnswerFrame.pack(anchor=W)
+        
     else:
-        outputAnswer.pack_forget()
-
+        outputAnswerFrame.pack_forget()
+        outputAnswerFrame = LabelFrame(firstWindow,padx=5,pady=5,text='Answer')
+        outputAnswerFrame.pack(anchor=W)
+    
+   
     try:
         outputDataFrame
     except:

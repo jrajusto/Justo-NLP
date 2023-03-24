@@ -60,6 +60,7 @@ def remove_stop_words(tokens):
     custom_stopwords.remove('more')
     custom_stopwords.append('generate')
     custom_stopwords.append('me')
+    custom_stopwords.remove('what')
 
     new_tokens = [word for word in tokens if word not in custom_stopwords]
     

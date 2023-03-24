@@ -72,8 +72,8 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
     orig_pos_tags = preprocess.pos_tagging(tokens)
 
     queryType = []
-    queryType.append(r"queryType1: {<NNP|JJ|VB|NN><NN|DT|VBP|VBZ>*<NN|JJ|VBZ>}") #Display temperature from tomato plant
-    queryType.append(r"parameters: {<NN|JJ|VBD><JJR|JJ|NN|IN|RBR|VBP>?<CD><CD>?}") #humidity is greater than 5 
+    queryType.append(r"queryType1: {<NNP|JJ|VB|NN|WP><NN|DT|VBP|VBZ>*<NN|JJ|VBZ>}") #Display temperature from tomato plant
+    queryType.append(r"parameters: {<NN|JJ|VBD><JJR|JJ|NN|IN|RBR|VBP|VBZ>?<CD><CD>?}") #humidity is greater than 5 
     queryType.append(r"conjuctions: {<CC>}") #AND OR
     queryType.append(r"adjective: {<JJ>}")
     queryType.append(r"monthQuery: {<DT|JJ|IN><NN>}") #this month or last 
@@ -150,16 +150,19 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
 
     optimalBool = True
     
+    if 'fahrenheit' in tokens:
+        raise Exception('temperature values only in Celsius')
+    
     if(len(test1Words) > 0):
         #check if show, get or graph is in the tokens
         for word in test1Words:
-            if((word in showSynonyms) or (word in getSynonyms) or (word in graphSynonyms) or (word in compareSynonyms) or (word in outputSynonyms) or (word == "list")or (word == "plot")):
+            if((word in showSynonyms) or (word in getSynonyms) or (word in graphSynonyms) or (word in compareSynonyms) or (word in outputSynonyms) or (word == "list")or (word == "plot")or (word == "what")):
                 print("optimal condition met")
                 optimalBool = False
                 break
         if not optimalBool:
             for word in test1Words:
-                if((word not in showSynonyms) and (word not in getSynonyms) and (word not in graphSynonyms) and (word not in compareSynonyms) and (word not in outputSynonyms)and (word != "check")and (word != "list")and (word != "plot")):
+                if((word not in showSynonyms) and (word not in getSynonyms) and (word not in graphSynonyms) and (word not in compareSynonyms) and (word not in outputSynonyms)and (word != "check")and (word != "list")and (word != "plot")and (word != "what")):
                     test1Words.remove(word)
                 else:
                     break
@@ -196,16 +199,24 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
 
                 sqlQuery = "SELECT ID, Date_n_Time"
                 specificBool = False
-
+                soilMoistureFound = False
                 for word in lemmatized_tokens:
                     if word in parameterList:
                         specificBool = True
-                        sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+                        if parameterToSQL[word] == 'Soil_Moisture' and soilMoistureFound == False:
+                            soilMoistureFound = True
+                            sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+                        elif  parameterToSQL[word] != 'Soil_Moisture':
+                            sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
                 if not specificBool:
                     for word in lemmatized_tokens:
                         if word in parameterList:
                             specificBool = True
-                            sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+                            if parameterToSQL[word] == 'Soil_Moisture' and soilMoistureFound == False:
+                                soilMoistureFound = True
+                                sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
+                            elif  parameterToSQL[word] != 'Soil_Moisture':
+                                sqlQuery = sqlQuery + ", " + parameterToSQL[word] 
 
                 chunk_adjective = nltk.RegexpParser(queryType[3])
                 chunk_adjective = chunk_adjective.parse(pos_tags)
@@ -249,8 +260,9 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 andDelay = 0
 
                 #add conditions of optimal plant
+                soilMoistureFound == False
                 for word in tokens:
-                    if word in parameterList:
+                    if word in parameterList and not((word == 'soil' or word == 'moisture') and soilMoistureFound )and parameterToSQL[word] not in entries:
                         if whereOnce == False:
                             sqlQuery = sqlQuery + "WHERE ("
                             whereOnce = True
@@ -277,10 +289,12 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                         elif word == "soil":
                             sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
                             entries.append('Soil_Moisture')
+                            soilMoistureFound = True
 
                         elif word == "moisture":
                             sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
                             entries.append('Soil_Moisture')
+                            soilMoistureFound = True
 
                         elif word == "light":
                             sqlQuery = sqlQuery + " Light_Intensity < " + str(optimalPlant.lightIntensity) 
@@ -315,14 +329,14 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                             
                     sqlQuery = sqlQuery + " AND Date_n_Time > '" + year + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + year + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
                 
-                    if 'today' in clean_tokens:
-                        month = str(currentMonth)
-                        sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
+                if 'today' in clean_tokens:
+                    month = str(currentMonth)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
 
-                    if 'yesterday' in clean_tokens:
-                        month = str(currentMonth)
-                        yesterday = str(int(currentDay)-1)
-                        sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
+                if 'yesterday' in clean_tokens:
+                    month = str(currentMonth)
+                    yesterday = str(int(currentDay)-1)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
 
                 finalQueries.append(sqlQuery)
 
@@ -348,8 +362,9 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 #add conditions of optimal plant
                 specificBool = False
                 entries = ['ID','Date_n_Time']
+                soilMoistureFound = False
                 for word in tokens:
-                    if word in parameterList:
+                    if word in parameterList and not((word == 'soil' or word == 'moisture') and soilMoistureFound) and parameterToSQL[word] not in entries:
                         
                         specificBool = True
                         if whereOnce == False:
@@ -378,9 +393,11 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                         elif word == "soil":
                             sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
                             entries.append('Soil_Moisture')
+                            soilMoistureFound = True
                         elif word == "moisture":
                             sqlQuery = sqlQuery + " Soil_Moisture < " + str(optimalPlant.soilMoisture)
                             entries.append('Soil_Moisture')
+                            soilMoistureFound = True
 
                         elif word == "light":
                             sqlQuery = sqlQuery + " Light_Intensity < " + str(optimalPlant.lightIntensity) 
@@ -412,20 +429,20 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                             
                     sqlQuery = sqlQuery + " AND Date_n_Time > '" + year + "-" + month + "-1 00:00:00'" + " AND Date_n_Time < '" + year + "-" + month + "-" + monthToDayMax[month] + " 23:59:59'"
                 
-                    if 'today' in clean_tokens:
-                        month = str(currentMonth)
-                        sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
+                if 'today' in clean_tokens:
+                    month = str(currentMonth)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + currentDay +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + currentDay +" 23:59:59'"
 
-                    if 'yesterday' in clean_tokens:
-                        month = str(currentMonth)
-                        yesterday = str(int(currentDay)-1)
-                        sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
+                if 'yesterday' in clean_tokens:
+                    month = str(currentMonth)
+                    yesterday = str(int(currentDay)-1)
+                    sqlQuery = sqlQuery + " AND Date_n_Time > '" + currentYear + "-" + month + "-" + yesterday +" 00:00:00'" + " AND Date_n_Time < '" + currentYear + "-" + month + "-" + yesterday +" 23:59:59'"
 
                 finalQueries.append(sqlQuery)
                 optimalBool = True
                 
 
-
+#------------------------------------------------------------------------------------------------------------------------------------
     #finding action
     elif(len(test1Words) > 0):
 
@@ -688,13 +705,23 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
             else:
                 finalString = "SELECT ID, Date_n_Time" 
                 showSpecified = False
+                soilMoistureFound = False
                 for word in test1Words:
-
+                    
                     if word in parameterList:
-                        entries.append(parameterToSQL[word])
-                        finalString = finalString + ", "
-                        finalString = finalString + parameterToSQL[word]
-                        showSpecified = True
+                        if parameterToSQL[word] == 'Soil_Moisture' and soilMoistureFound == False:
+                            soilMoistureFound = True
+                            entries.append(parameterToSQL[word])
+                            finalString = finalString + ", "
+                            finalString = finalString + parameterToSQL[word]
+                            showSpecified = True
+                        elif  parameterToSQL[word] != 'Soil_Moisture':
+                            entries.append(parameterToSQL[word])
+                            finalString = finalString + ", "
+                            finalString = finalString + parameterToSQL[word]
+                            showSpecified = True
+
+                        
 
 
                         if withinParameterWordList:
@@ -703,8 +730,14 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 
                 #if paramter shown not specified
                 if showSpecified == False:
+                    soilMoistureFound = False
                     for word in tokens:
-                        if word in parameterList and parameterToSQL[word] not in entries:
+                        if word in parameterList and parameterToSQL[word] not in entries and soilMoistureFound == False and parameterToSQL[word] not in entries:
+                            soilMoistureFound = True
+                            entries.append(parameterToSQL[word])
+                            finalString = finalString + ", "
+                            finalString = finalString + parameterToSQL[word]
+                        elif word in parameterList and parameterToSQL[word] not in entries and parameterToSQL[word] != 'Soil_Moisture' and parameterToSQL[word] not in entries: 
                             entries.append(parameterToSQL[word])
                             finalString = finalString + ", "
                             finalString = finalString + parameterToSQL[word]
@@ -752,7 +785,9 @@ def convertToSql(query,optimalPlant1,optimalPlant2,optimalPlant3,optimalPlant4,p
                 for i in range(1,len(plantNames)):
                     finalQueries.append(finalString.replace(plantDict[plantNames[0]],plantDict[plantNames[i]]))
 
-     
+    #if showing no parameters
+    if len(entries) == 2:
+        raise Exception('no parameters given')
 
     print("headings")
     print(entries)
