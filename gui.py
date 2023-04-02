@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
+import csv
 
 class Plant:
     def __init__(self,name,hum,temp,soil,air,lux):
@@ -29,12 +30,23 @@ class Plant:
         self.airQuality = air
         self.lightIntensity = lux
 
+with open('plantNames.csv','r') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    line_count = 0
+    for row in csv_reader:
+        if line_count == 1:
+            optimalPlant1 = Plant(row[0],row[1],row[2],row[3],row[4],row[5])
+        if line_count == 2:
+            optimalPlant2 = Plant(row[0],row[1],row[2],row[3],row[4],row[5])
+        if line_count == 3:
+            optimalPlant3 = Plant(row[0],row[1],row[2],row[3],row[4],row[5])
+        if line_count == 4:
+            optimalPlant4 = Plant(row[0],row[1],row[2],row[3],row[4],row[5])
+        line_count = line_count + 1
+
 
 #optimal conditions for the plants
-optimalPlant1 = Plant('tomato',75,30,60,80,200)
-optimalPlant2 = Plant('grape',75,30,60,80,200)
-optimalPlant3 = Plant('wheat',75,30,60,80,200)
-optimalPlant4 = Plant('corn',75,30,60,80,200)
+
 
 #list of plants available
 plantList = ['tomato','grape','wheat','corn']
@@ -43,18 +55,48 @@ averageList = []
 SQLtoParameter = {'Temperature':'temperature','Humidity':'humidity','Air_Quality':'air quality','Soil_Moisture':'soil moisture','Light_Intensity':'light'}
 
 def editOptimal(name,hum,temp,soil,air,lux,node):
+    df = pd.read_csv("plantNames.csv")
     if node == 1:
         optimalPlant1.setOptimal(name,hum,temp,soil,air,lux)
         plantList[0] = name
+        df.loc[1,'name'] = name
+        df.loc[1,'humidity'] = hum
+        df.loc[1,'temperature'] = temp
+        df.loc[1,'soil_moisture'] = soil
+        df.loc[1,'air_quality'] = air
+        df.loc[1,'light_intensity'] = lux
+
     elif node == 2:
         optimalPlant2.setOptimal(name,hum,temp,soil,air,lux)
         plantList[1] = name
+        df.loc[2,'name'] = name
+        df.loc[2,'humidity'] = hum
+        df.loc[2,'temperature'] = temp
+        df.loc[2,'soil_moisture'] = soil
+        df.loc[2,'air_quality'] = air
+        df.loc[2,'light_intensity'] = lux
     elif node == 3:
         optimalPlant3.setOptimal(name,hum,temp,soil,air,lux)
         plantList[2] = name
+        df.loc[3,'name'] = name
+        df.loc[3,'humidity'] = hum
+        df.loc[3,'temperature'] = temp
+        df.loc[3,'soil_moisture'] = soil
+        df.loc[3,'air_quality'] = air
+        df.loc[3,'light_intensity'] = lux
     elif node == 4:
         optimalPlant4.setOptimal(name,hum,temp,soil,air,lux)
         plantList[3] = name
+        df.loc[4,'name'] = name
+        df.loc[4,'humidity'] = hum
+        df.loc[4,'temperature'] = temp
+        df.loc[4,'soil_moisture'] = soil
+        df.loc[4,'air_quality'] = air
+        df.loc[4,'light_intensity'] = lux
+
+    df.to_csv("plantNames.csv", index=False)
+    
+
 
 def openOptimalWindow():
     optimalWindow = Toplevel(root)

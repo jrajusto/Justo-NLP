@@ -1,4 +1,5 @@
-tomato,75,30,60,80,200 
+name,humidity,temperature,soil_moisture,air_quality,light_intensity
+tomato,75,30,60,80,200
 grape,75,30,60,80,200
-wheat,75,30,60,80,200
+grape,75,30,60,80,200
 corn,75,30,60,80,200
